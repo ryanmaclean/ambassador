@@ -238,6 +238,10 @@ class IRCluster (IRResource):
             self.logger.debug("no relevant endpoint found for hostname {}".format(hostname))
             return {}
 
+        if service_info is None:
+            self.logger.debug("no service found for hostname {}".format(hostname))
+            return {}
+
         ip = []
         for address in endpoint['addresses']:
             ip.append(address['ip'])
@@ -247,17 +251,16 @@ class IRCluster (IRResource):
         # service_port_name  is only required if there are multiple ports in a given service, to match
         # the port in Endpoint resource
         service_port_name = ""
-        if service_info is not None:
-            service_ports = service_info.get('ports', [])
-            num_service_ports = len(service_ports)
-            if num_service_ports > 1:
-                for service_port in service_ports:
-                    if port == service_port.get('port'):
-                        service_port_name = service_port.get('name')
-                        break
-            elif num_service_ports == 0:
-                self.logger.debug("no service port found for service: {}".format(service_info))
-                return {}
+        service_ports = service_info.get('ports', [])
+        num_service_ports = len(service_ports)
+        if num_service_ports > 1:
+            for service_port in service_ports:
+                if port == service_port.get('port'):
+                    service_port_name = service_port.get('name')
+                    break
+        elif num_service_ports == 0:
+            self.logger.debug("no service port found for service: {}".format(service_info))
+            return {}
 
         self.logger.debug("service port name is '{}'".format(service_port_name))
 

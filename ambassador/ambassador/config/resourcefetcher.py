@@ -148,7 +148,7 @@ class ResourceFetcher:
         k8s_object = ObjectKind(obj=obj, filename=self.filename, logger=self.logger)
         parsed, resource_identifier = k8s_object.parse()
         if parsed is None:
-            self.logger.debug("%s: ignoring K8s object, unsupported kind %s" % (self.location, k8s_object.get_kind()))
+            self.logger.debug("%s: ignoring K8s object, unable to parse kind %s" % (self.location, k8s_object.get_kind()))
             return
 
         self.parse_object(parsed, filename=self.filename, rkey=resource_identifier)
@@ -333,7 +333,7 @@ class ServiceKind(ObjectKind):
         # self.logger.debug("annotations %s" % annotations)
 
         if not annotations:
-            # self.logger.debug("%s: ignoring K8s %s without Ambassador annotation" % (self.location, kind))
+            self.logger.debug("ignoring K8s %s %s without Ambassador annotation" % (kind, resource_name))
             return None, ""
 
         if self.filename and (not self.filename.endswith(":annotation")):
