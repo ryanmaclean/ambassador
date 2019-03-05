@@ -528,6 +528,13 @@ class Config:
 
         self.safe_store("endpoints", resource)
 
+    def handle_serviceinfo(self, resource: ACResource) -> None:
+        """
+        Handles an ServiceInfo resource.
+        """
+
+        self.safe_store("service_info", resource)
+
     def handle_mapping(self, resource: ACMapping) -> None:
         """
         Handles a ACMapping resource.

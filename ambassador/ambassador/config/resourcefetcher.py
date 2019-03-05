@@ -275,10 +275,7 @@ class EndpointsKind(ObjectKind):
             if len(addresses) == 0:
                 continue
 
-            ports = []
-            for port in subset.get('ports', []):
-                endpoint_port = port.get('port')
-                ports.append(endpoint_port)
+            ports = subset.get('ports', [])
 
             subsets.append({
                 'kind': kind,
@@ -297,6 +294,17 @@ class EndpointsKind(ObjectKind):
 class ServiceKind(ObjectKind):
     def parse(self):
         kind = self.get_kind()
+        service_info = {
+            'kind': 'ServiceInfo'
+        }
+        spec = self.object.get('spec', None)
+        if spec is not None:
+            ports = spec.get('ports', None)
+            if ports is not None:
+                service_info['ports'] = []
+                for port in ports:
+                    service_info['ports'].append(port)
+
         metadata = self.object.get('metadata', None)
 
         if not metadata:
@@ -305,6 +313,7 @@ class ServiceKind(ObjectKind):
 
         # Use metadata to build a unique resource identifier
         resource_name = metadata.get('name')
+        service_info['name'] = resource_name
 
         # This should never happen as the name field is required in metadata for Service
         if not resource_name:
@@ -335,5 +344,7 @@ class ServiceKind(ObjectKind):
             objects = list(yaml.safe_load_all(annotations))
         except yaml.error.YAMLError as e:
             self.logger.debug("could not parse YAML: %s" % e)
+
+        objects.append(service_info)
 
         return objects, resource_identifier

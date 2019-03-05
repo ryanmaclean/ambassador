@@ -77,12 +77,11 @@ class V2Cluster(dict):
         endpoint = cluster.endpoint
         if len(endpoint) > 0:
             for ip in endpoint['ip']:
-                for port in endpoint['ports']:
-                    address = {
-                        'address': ip,
-                        'port_value': port
-                    }
-                    result.append({'endpoint': {'address': {'socket_address': address}}})
+                address = {
+                    'address': ip,
+                    'port_value': endpoint['port']
+                }
+                result.append({'endpoint': {'address': {'socket_address': address}}})
         else:
             for u in cluster.urls:
                 p = urllib.parse.urlparse(u)

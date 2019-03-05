@@ -187,7 +187,8 @@ class IRCluster (IRResource):
         # TLS. Kind of odd, but there we go.)
         url = "tcp://%s:%d" % (hostname, port)
 
-        endpoint = self.get_endpoint(hostname, port, ir.endpoints)
+        self.logger.debug("fetching endpoint information for {}".format(hostname))
+        endpoint = self.get_endpoint(hostname, port, ir.service_info.get(service, None), ir.endpoints.get(hostname, None))
 
         # OK. Build our default args.
         #
@@ -232,23 +233,65 @@ class IRCluster (IRResource):
         if ctx:
             ctx.referenced_by(self)
 
-    def get_endpoint(self, hostname, port, endpoints):
+    def get_endpoint(self, hostname, port, service_info, endpoint):
+        if endpoint is None:
+            self.logger.debug("no relevant endpoint found for hostname {}".format(hostname))
+            return {}
+
         ip = []
-        ports = []
-        if hostname in endpoints:
-            for address in endpoints[hostname]['addresses']:
-                ip.append(address['ip'])
+        for address in endpoint['addresses']:
+            ip.append(address['ip'])
 
-            for port in endpoints[hostname]['ports']:
-                ports.append(port)
+        ep_port = None
 
-            return {
-                'ip': ip,
-                'ports': ports
-            }
+        # service_port_name  is only required if there are multiple ports in a given service, to match
+        # the port in Endpoint resource
+        service_port_name = ""
+        if service_info is not None:
+            service_ports = service_info.get('ports', [])
+            num_service_ports = len(service_ports)
+            if num_service_ports > 1:
+                for service_port in service_ports:
+                    if port == service_port.get('port'):
+                        service_port_name = service_port.get('name')
+                        break
+            elif num_service_ports == 0:
+                self.logger.debug("no service port found for service: {}".format(service_info))
+                return {}
 
-        self.logger.debug("no endpoint found for hostname {}".format(hostname))
-        return {}
+        self.logger.debug("service port name is '{}'".format(service_port_name))
+
+        if len(service_port_name) == 0:
+            # this means there is only one port
+            endpoint_ports = endpoint.get('ports', [])
+            if len(endpoint_ports) != 1:
+                self.logger.debug("no or more than one endpoint ports found {}, not enabling endpoint routing".format(endpoint_ports))
+                return {}
+            ep_port = endpoint_ports[0].get('port', None)
+        else:
+            # there are more than one service ports, so we need to match on name
+            endpoint_ports = endpoint.get('ports', [])
+            for ep in endpoint_ports:
+                name = ep.get('name', "")
+                if name == service_port_name:
+                    ep_port = ep.get('port', None)
+                    break
+
+        if ep_port is None:
+            self.logger.debug("could not discover any relevant endpoint port for hostname {}, not enabling endpoint routing".format(hostname))
+            return {}
+
+        if len(ip) == 0:
+            self.logger.debug("no IP addresses found for endpoint for hostname {}, not enabling endpoint routing".format(hostname))
+            return {}
+
+        generated_endpoint = {
+            'ip': ip,
+            'port': ep_port
+        }
+        self.logger.debug("generated endpoint for hostname {}: {}".format(hostname, generated_endpoint))
+
+        return generated_endpoint
 
     def add_url(self, url: str) -> List[str]:
         self.urls.append(url)
