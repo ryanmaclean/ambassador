@@ -1,6 +1,6 @@
-from ambassador.tests.kat.abstract_tests import AmbassadorTest, ServiceType, HTTP
-from kat.kat.harness import Query
+from kat.harness import Query
 
+from abstract_tests import AmbassadorTest, ServiceType, HTTP
 
 class LuaTest(AmbassadorTest):
     target: ServiceType
