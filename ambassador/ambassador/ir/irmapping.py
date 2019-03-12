@@ -65,6 +65,7 @@ class IRMapping (IRResource):
         "host_regex": True,
         "host_rewrite": True,
         "labels": True, # Only supported in v1, handled in setup
+        "load_balancer": True,
         "method": True,
         "method_regex": True,
         "modules": True,
@@ -207,6 +208,11 @@ class IRMapping (IRResource):
                 domain = 'ambassador' if not ir.ratelimit else ir.ratelimit.domain
                 self['labels'] = { domain: labels }
 
+        if 'load_balancer' in self:
+            if not self.validate_load_balancer(self['load_balancer']):
+                self.post_error("Invalid load_balancer specified: {}, invalidating mapping".format(self['load_balancer']))
+                return False
+
         return True
 
     def _group_id(self) -> str:
@@ -253,6 +259,20 @@ class IRMapping (IRResource):
                     return context
 
         return None
+
+    @staticmethod
+    def validate_load_balancer(load_balancer) -> bool:
+        valid_load_balancers = {
+            'kubernetes': ['round_robin'],
+            'envoy': ['round_robin']
+        }
+
+        lb_type = load_balancer.get('type', None)
+        lb_policy = load_balancer.get('policy', None)
+        if lb_type in valid_load_balancers:
+            if lb_policy in valid_load_balancers[lb_type]:
+                return True
+        return False
 
 
 ########
@@ -421,6 +441,7 @@ class IRMappingGroup (IRResource):
                             enable_ipv4=mapping.get('enable_ipv4', None),
                             enable_ipv6=mapping.get('enable_ipv6', None),
                             grpc=mapping.get('grpc', False),
+                            load_balancer=mapping.get('load_balancer', None),
                             marker=marker)
 
         stored = ir.add_cluster(cluster)
