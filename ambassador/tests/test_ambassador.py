@@ -1254,6 +1254,71 @@ service: http://{self.target.path.fqdn}
         assert 0 < self.results[-1].json[0]['datapoints'][0][0] <= 1000
 
 
+class LoadBalancerTest(MappingTest):
+
+    parent: AmbassadorTest
+
+    @classmethod
+    def variants(cls):
+        for st in variants(ServiceType):
+            yield cls(st, name="{self.target.name}")
+
+    def config(self):
+        yield self, self.format("""
+---
+apiVersion: ambassador/v1
+kind:  Mapping
+name:  {self.name}-1
+prefix: /{self.name}-1/
+service: {self.target.path.fqdn}
+load_balancer:
+  type: kubernetes
+  policy: round_robin
+""")
+
+        yield self, self.format("""
+---
+apiVersion: ambassador/v1
+kind:  Mapping
+name:  {self.name}-2
+prefix: /{self.name}-2/
+service: {self.target.path.fqdn}
+load_balancer:
+  type: envoy
+  policy: round_robin
+""")
+
+        yield self, self.format("""
+---
+apiVersion: ambassador/v1
+kind:  Mapping
+name:  {self.name}-3
+prefix: /{self.name}-3/
+service: {self.target.path.fqdn}
+load_balancer:
+  type: k8s
+  policy: round_robin
+""")
+
+        yield self, self.format("""
+---
+apiVersion: ambassador/v1
+kind:  Mapping
+name:  {self.name}-4
+prefix: /{self.name}-4/
+service: {self.target.path.fqdn}
+load_balancer:
+  type: envoy
+  policy: rr
+""")
+
+    def queries(self):
+        yield Query(self.parent.url(self.name + "-1/"))
+        yield Query(self.parent.url(self.name + "-2/"))
+        yield Query(self.parent.url(self.name + "-3/"), expected=404)
+        yield Query(self.parent.url(self.name + "-4/"), expected=404)
+
+
 # pytest will find this because Runner is a toplevel callable object in a file
 # that pytest is willing to look inside.
 #
